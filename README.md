@@ -28,6 +28,7 @@ Ein hochgradig interaktives CLI-Lernsystem, das speziell für die Vorbereitung a
 2. **Abhängigkeiten installieren:**
    ```bash
    pip install tzdata
+   pip install customtkinter
    ```
 3. **Programm starten:**
    ```bash

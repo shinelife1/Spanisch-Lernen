@@ -1,394 +1,416 @@
-import os
+import customtkinter as ctk
 import json
+import os
 import random
 import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 # =============================================================================
-# 1. STYLE-KLASSE: FARBEN UND UI-ELEMENTE
+# 1. KONFIGURATION & DESIGN
 # =============================================================================
-class Style:
-    """
-    Diese Klasse speichert alle ANSI-Farbcodes, um das Terminal schöner
-    zu gestalten. Das sorgt für eine bessere User Experience (UX).
-    """
-    GRUEN = '\033[92m'
-    GELB = '\033[93m'
-    ROT = '\033[91m'
-    BLAU = '\033[94m'
-    CYAN = '\033[96m'
-    MAGENTA = '\033[95m'
-    FETT = '\033[1m'
-    UNTERSTRICH = '\033[4m'
-    ENDE = '\033[0m'
-    
-    # Trennlinien für die Strukturierung der Anzeige
-    LINIE_DICK = f"{CYAN}" + "━" * 60 + f"{ENDE}"
-    LINIE_DUNN = f"{CYAN}" + "─" * 60 + f"{ENDE}"
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
 
-# Name der Datei, in der alle Fortschritte gespeichert werden
 DATA_FILE = "vokabel_ultimate_data.json"
 
-# =============================================================================
-# 2. DATA-MANAGEMENT (LADEN, SPEICHERN, UPDATEN)
-# =============================================================================
+class VokabelApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
 
-def laden():
-    """
-    Lädt die Datenbank aus der JSON-Datei.
-    Beinhaltet eine Migrationslogik, um alte Dateiformate automatisch
-    auf das neue Abteil-System (Kategorien) zu aktualisieren.
-    """
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                d = json.load(f)
-                
-                # PRÜFUNG: Existiert das Abteil-System?
-                if "abteile" not in d:
-                    # Migration von alter Struktur
-                    alte_v = d.get("vokabeln", {})
-                    alte_s = d.get("saetze", {})
-                    d["abteile"] = {
-                        "Allgemein": {
-                            "vokabeln": alte_v,
-                            "saetze": alte_s
-                        }
-                    }
-                
-                # PRÜFUNG: Einstellungen vorhanden?
-                if "settings" not in d:
-                    d["settings"] = {
-                        "modus": "SP_DE",
-                        "typ": "vokabeln",
-                        "aktiv_abteil": "Allgemein"
-                    }
-                
-                # PRÜFUNG: Statistiken vorhanden?
-                if "stats" not in d:
-                    d["stats"] = {"punkte": 0, "korrekt": 0, "falsch": 0}
-                
-                return d
-        except Exception as e:
-            print(f"Fehler beim Laden: {e}")
-            time.sleep(2)
-            
-    # Standard-Struktur bei Erststart
-    return {
-        "abteile": {
-            "Allgemein": {
-                "vokabeln": {"Hola": "Hallo", "Gracias": "Danke"},
-                "saetze": {"Como estas?": "Wie geht es dir?"}
-            },
-            "Restaurant": {
-                "vokabeln": {"La cuenta": "Die Rechnung", "Agua": "Wasser"},
-                "saetze": {"Una mesa para dos": "Ein Tisch für zwei"}
-            }
-        },
-        "stats": {"punkte": 0, "korrekt": 0, "falsch": 0},
-        "settings": {
-            "modus": "SP_DE",
-            "typ": "vokabeln",
-            "aktiv_abteil": "Allgemein"
+        # Fenster-Konfiguration
+        self.title("🇪🇸 Vocabulary Master Ultimate GUI - Spain 2026")
+        self.geometry("900x750")
+        
+        # Daten-Initialisierung
+        self.daten = self.laden()
+        
+        # Quiz-Variablen
+        self.quiz_pool = []
+        self.quiz_index = 0
+        self.runde_korrekt = 0
+        self.limit = 0
+
+        # Haupt-Frame (Die Bühne der App)
+        self.container = ctk.CTkFrame(self, fg_color="transparent")
+        self.container.pack(fill="both", expand=True, padx=30, pady=30)
+
+        # Start mit dem Hauptmenü
+        self.zeige_hauptmenue()
+
+    # =============================================================================
+    # 2. DATEN-LOGIK (LADEN / SPEICHERN)
+    # =============================================================================
+
+    def laden(self):
+        """ Lädt die JSON-Datenbank mit Migrationslogik. """
+        if os.path.exists(DATA_FILE):
+            try:
+                with open(DATA_FILE, "r", encoding="utf-8") as f:
+                    d = json.load(f)
+                    # Struktur-Check (wie im Terminal-Code)
+                    if "abteile" not in d:
+                        alte_v = d.get("vokabeln", {})
+                        alte_s = d.get("saetze", {})
+                        d["abteile"] = {"Allgemein": {"vokabeln": alte_v, "saetze": alte_s}}
+                    if "settings" not in d:
+                        d["settings"] = {"modus": "SP_DE", "typ": "vokabeln", "aktiv_abteil": "Allgemein"}
+                    if "stats" not in d:
+                        d["stats"] = {"punkte": 0, "korrekt": 0, "falsch": 0}
+                    return d
+            except Exception as e:
+                print(f"Ladefehler: {e}")
+        
+        # Standard-Daten falls Datei fehlt
+        return {
+            "abteile": {"Allgemein": {"vokabeln": {"Hola": "Hallo"}, "saetze": {"Como estas?": "Wie geht es dir?"}}},
+            "stats": {"punkte": 0, "korrekt": 0, "falsch": 0},
+            "settings": {"modus": "SP_DE", "typ": "vokabeln", "aktiv_abteil": "Allgemein"}
         }
-    }
 
-def speichern(daten):
-    """
-    Speichert den aktuellen Zustand in der JSON-Datei.
-    Verwendet indent=4 für bessere Lesbarkeit durch den Menschen.
-    """
-    try:
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(daten, f, indent=4, ensure_ascii=False)
-    except Exception as e:
-        print(f"Fehler beim Speichern: {e}")
-
-# =============================================================================
-# 3. LOGIK-FUNKTIONEN (RÄNGE, BALKEN, HILFE)
-# =============================================================================
-
-def get_rang_info(punkte):
-    """
-    Gibt den aktuellen Rang und die Punkte bis zum nächsten Level zurück.
-    """
-    if punkte < 100:
-        return "Principiante (Anfänger)", 100 - punkte
-    elif punkte < 300:
-        return "Turista (Tourist)", 300 - punkte
-    elif punkte < 600:
-        return "Residente (Einwohner)", 600 - punkte
-    elif punkte < 1000:
-        return "Local (Einheimischer)", 1000 - punkte
-    else:
-        return "Hidalgo (Spanischer Edelmann)", 0
-
-def zeichne_fortschritt(aktuell, gesamt):
-    """
-    Erstellt eine visuelle Ladeleiste für das Quiz.
-    """
-    laenge = 25
-    prozent = aktuell / gesamt
-    gefuellt = int(laenge * prozent)
-    bar = "█" * gefuellt + "░" * (laenge - gefuellt)
-    return f"{Style.BLAU}|{bar}| {aktuell}/{gesamt}{Style.ENDE}"
-
-def zeige_hilfe():
-    """
-    Ein ausführliches Handbuch innerhalb des Programms.
-    """
-    os.system('cls' if os.name == 'nt' else 'clear')
-    print(Style.LINIE_DICK)
-    print(f"{Style.FETT}{Style.GELB}   HILFE & ANLEITUNG{Style.ENDE}")
-    print(Style.LINIE_DICK)
-    print("1. MARATHON-QUIZ: Teste dein Wissen mit Punktesystem.")
-    print("   Richtig = +10 Punkte | Falsch = -5 Punkte.")
-    print("2. FREIES ÜBEN: Lerne ohne Stress. Benutze '?' für Tipps.")
-    print("3. ABTEILE: Organisiere Wörter in Gruppen (z.B. Urlaub, Arbeit).")
-    print("4. EINSTELLUNGEN: Wechsel zwischen Vokabeln und Sätzen.")
-    print("5. SUCHEN: Schnelles Nachschlagen wie in einem Wörterbuch.")
-    print("\nTipp: Benutze im Quiz keine Sonderzeichen (á, ñ), wenn du")
-    print("das entsprechende Tastaturlayout nicht hast.")
-    print(Style.LINIE_DUNN)
-    input("Drücke Enter, um zum Menü zurückzukehren...")
-
-def print_logo():
-    """
-    Gibt ein dekoratives Logo im Terminal aus.
-    """
-    print(f"{Style.GRUEN}{Style.FETT}")
-    print("  ███████╗██████╗  █████╗ ██╗███╗   ██╗")
-    print("  ██╔════╝██╔══██╗██╔══██╗██║████╗  ██║")
-    print("  ███████╗██████╔╝███████║██║██╔██╗ ██║")
-    print("  ╚════██║██╔═══╝ ██╔══██║██║██║╚██╗██║")
-    print("  ███████║██║     ██║  ██║██║██║ ╚████║")
-    print("  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝")
-    print(f"      VOCABULARY MASTER ULTIMATE{Style.ENDE}")
-
-# =============================================================================
-# 4. HAUPTSCHLEIFE (MENÜSTEUERUNG)
-# =============================================================================
-
-daten = laden()
-
-while True:
-    # GUI-Vorbereitung
-    os.system('cls' if os.name == 'nt' else 'clear')
-    berlin_zeit = datetime.now(ZoneInfo("Europe/Berlin")).strftime("%H:%M:%S")
-    
-    # Kurzvariablen für besseren Zugriff
-    s = daten["stats"]
-    sett = daten["settings"]
-    punkte = s["punkte"]
-    rang, bis_next = get_rang_info(punkte)
-    
-    # Aktives Abteil laden
-    abt_name = sett["aktiv_abteil"]
-    # Validierung: Existiert das Abteil noch?
-    if abt_name not in daten["abteile"]:
-        abt_name = list(daten["abteile"].keys())[0]
-        sett["aktiv_abteil"] = abt_name
-        
-    typ = sett["typ"] # 'vokabeln' oder 'saetze'
-    pool = daten["abteile"][abt_name][typ]
-    
-    # Dashboard-Anzeige
-    print_logo()
-    print(Style.LINIE_DICK)
-    print(f"🕒 {berlin_zeit} | 📂 {Style.FETT}ABTEIL: {abt_name.upper()}{Style.ENDE}")
-    print(f"💡 Modus: {typ.capitalize()} | {sett['modus']}")
-    print(Style.LINIE_DUNN)
-    print(f"👤 RANG  : {Style.GELB}{rang}{Style.ENDE}")
-    print(f"🏆 PUNKTE: {Style.GRUEN}{punkte}{Style.ENDE} (Noch {bis_next} bis zum nächsten Level)")
-    print(f"📊 STATS : ✅ {s['korrekt']} Korrekt | ❌ {s['falsch']} Falsch")
-    print(Style.LINIE_DICK)
-    
-    # Menü-Optionen
-    print(f"{Style.BLAU}[1]{Style.ENDE} Marathon-Quiz starten")
-    print(f"{Style.BLAU}[2]{Style.ENDE} Freies Üben (Lern-Modus)")
-    print(f"{Style.BLAU}[3]{Style.ENDE} Eintrag zu '{abt_name}' hinzufügen")
-    print(f"{Style.BLAU}[4]{Style.ENDE} Abteil verwalten (Löschen/Ansehen)")
-    print(f"{Style.GELB}[5]{Style.ENDE} EINSTELLUNGEN (Abteil/Modus/Typ)")
-    print(f"{Style.GRUEN}[6]{Style.ENDE} Suchen (Wörterbuch-Suche)")
-    print(f"{Style.MAGENTA}[7]{Style.ENDE} Hilfe / Anleitung")
-    print(f"{Style.ROT}[8]{Style.ENDE} Beenden & Speichern")
-    print(Style.LINIE_DUNN)
-    
-    wahl = input(f"{Style.FETT}Deine Wahl (1-8): {Style.ENDE}")
-
-    # --- AKTIONEN ---
-    
-    if wahl == "1": # QUIZ
-        if not pool:
-            print(f"{Style.ROT}Dieses Abteil ist leer!{Style.ENDE}")
-            time.sleep(1.5)
-            continue
-            
+    def speichern(self):
+        """ Sichert den aktuellen Zustand. """
         try:
-            limit_in = input(f"Wie viele Fragen? (1-{len(pool)}): ")
-            limit = int(limit_in)
-            limit = min(max(1, limit), len(pool))
-        except:
-            limit = 5
-            
-        fragen = list(pool.keys())
-        random.shuffle(fragen)
-        fragen = fragen[:limit]
-        runde_korrekt = 0
-        
-        for idx, q_key in enumerate(fragen, 1):
-            os.system('cls' if os.name == 'nt' else 'clear')
-            print(Style.LINIE_DICK)
-            print(f"QUIZ-MODUS | {zeichne_fortschritt(idx, limit)}")
-            print(Style.LINIE_DUNN)
-            
-            original_de = pool[q_key]
-            
-            # Richtung bestimmen
-            if sett["modus"] == "SP_DE":
-                frage, antwort_ziel = q_key, original_de
-            else:
-                frage, antwort_ziel = original_de, q_key
-                
-            print(f"\nÜbersetze: {Style.FETT}{Style.CYAN}{frage}{Style.ENDE}")
-            user_ans = input("Antwort: ").strip().lower()
-            
-            if user_ans == antwort_ziel.lower():
-                print(f"\n{Style.GRUEN}✨ EXZELLENT! +10 Punkte.{Style.ENDE}")
-                s["punkte"] += 10
-                s["korrekt"] += 1
-                runde_korrekt += 1
-            else:
-                print(f"\n{Style.ROT}❌ LEIDER FALSCH.{Style.ENDE}")
-                print(f"Lösung: {Style.FETT}{antwort_ziel}{Style.ENDE}")
-                s["falsch"] += 1
-                s["punkte"] = max(0, s["punkte"] - 5)
-                
-            time.sleep(1)
-            input("\nWeiter mit Enter...")
-            
-        speichern(daten)
-        print(f"\n{Style.GELB}RUNDE BEENDET! Du hast {runde_korrekt}/{limit} geschafft.{Style.ENDE}")
-        time.sleep(2)
+            with open(DATA_FILE, "w", encoding="utf-8") as f:
+                json.dump(self.daten, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            print(f"Speicherfehler: {e}")
 
-    elif wahl == "2": # ÜBEN
+    def clear_screen(self):
+        """ Löscht alle Widgets im Container für den Ansichts-Wechsel. """
+        for widget in self.container.winfo_children():
+            widget.destroy()
+
+    # =============================================================================
+    # 3. ANSICHTEN (UI-LOGIK)
+    # =============================================================================
+
+    def zeige_hauptmenue(self):
+        self.clear_screen()
+        self.unbind("<Return>") # Enter-Taste vom Quiz lösen
+        
+        # Daten-Referenzen
+        s = self.daten["stats"]
+        sett = self.daten["settings"]
+        punkte = s["punkte"]
+        rang = self.get_rang_name(punkte)
+        zeit = datetime.now(ZoneInfo("Europe/Berlin")).strftime("%H:%M:%S")
+
+        # --- Dashboard Frame ---
+        dash = ctk.CTkFrame(self.container, corner_radius=15, border_width=2, border_color="#3a7ebf")
+        dash.pack(fill="x", pady=(0, 20), padx=10)
+
+        title = ctk.CTkLabel(dash, text="VOCABULARY MASTER ULTIMATE", font=("Arial", 28, "bold"), text_color="#3a7ebf")
+        title.pack(pady=(15, 5))
+
+        info_bar = ctk.CTkLabel(dash, text=f"🕒 Berlin: {zeit}  |  📂 Abteil: {sett['aktiv_abteil'].upper()}", font=("Arial", 13, "italic"))
+        info_bar.pack(pady=5)
+
+        # --- Stats Sektion ---
+        stats_frame = ctk.CTkFrame(dash, fg_color="transparent")
+        stats_frame.pack(pady=10)
+        
+        ctk.CTkLabel(stats_frame, text=f"👤 Rang: {rang}", font=("Arial", 16, "bold"), text_color="#e6b800").grid(row=0, column=0, padx=20)
+        ctk.CTkLabel(stats_frame, text=f"🏆 Punkte: {punkte}", font=("Arial", 16, "bold"), text_color="#2fa572").grid(row=0, column=1, padx=20)
+        ctk.CTkLabel(stats_frame, text=f"✅ {s['korrekt']} | ❌ {s['falsch']}", font=("Arial", 16)).grid(row=0, column=2, padx=20)
+
+        # --- Menü Buttons ---
+        btn_container = ctk.CTkFrame(self.container, fg_color="transparent")
+        btn_container.pack(expand=True)
+
+        options = [
+            ("🚀 Marathon-Quiz starten", self.setup_quiz, "#3a7ebf"),
+            ("📖 Freies Üben (Lernen)", self.start_ueben, "#3a7ebf"),
+            ("➕ Wort/Satz hinzufügen", self.zeige_hinzufuegen, "#3a7ebf"),
+            ("📁 Liste verwalten / Löschen", self.zeige_verwaltung, "#3a7ebf"),
+            ("🔍 Suchen (Wörterbuch)", self.zeige_suche, "#2fa572"),
+            ("⚙️ Einstellungen (Modus/Typ)", self.zeige_einstellungen, "#e6b800"),
+            ("❌ Beenden & Speichern", self.safe_exit, "#721c24")
+        ]
+
+        for text, cmd, color in options:
+            btn = ctk.CTkButton(btn_container, text=text, command=cmd, font=("Arial", 15, "bold"), 
+                                height=45, width=400, fg_color=color, hover_color="#2b2b2b")
+            btn.pack(pady=8)
+
+    def get_rang_name(self, p):
+        if p < 100: return "Principiante"
+        elif p < 300: return "Turista"
+        elif p < 600: return "Residente"
+        elif p < 1000: return "Local"
+        else: return "Hidalgo"
+
+    # =============================================================================
+    # 4. QUIZ-SEKTION
+    # =============================================================================
+
+    def setup_quiz(self):
+        self.clear_screen()
+        pool = self.daten["abteile"][self.daten["settings"]["aktiv_abteil"]][self.daten["settings"]["typ"]]
+        
         if not pool:
-            print("Abteil leer!"); time.sleep(1); continue
-            
-        training = True
-        while training:
-            os.system('cls' if os.name == 'nt' else 'clear')
-            q = random.choice(list(pool.keys()))
-            de = pool[q]
-            f, loes = (q, de) if sett["modus"] == "SP_DE" else (de, q)
-            
-            print(f"{Style.GELB}--- LERNMODUS ---{Style.ENDE}")
-            print("('exit' zum Verlassen, '?' für Lösung)")
-            print(f"Frage: {Style.CYAN}{f}{Style.ENDE}")
-            
-            ans = input("Antwort: ").strip().lower()
-            if ans == "exit":
-                training = False
-            elif ans == "?":
-                print(f"Lösung: {Style.FETT}{loes}{Style.ENDE}")
-                input("Enter...")
-            elif ans == loes.lower():
-                print(f"{Style.GRUEN}Richtig!{Style.ENDE}")
-                time.sleep(0.5)
-            else:
-                print(f"{Style.ROT}Nicht ganz...{Style.ENDE}")
-                time.sleep(0.8)
+            ctk.CTkLabel(self.container, text="Fehler: Das Abteil ist leer!", font=("Arial", 20), text_color="red").pack(pady=50)
+            ctk.CTkButton(self.container, text="Zurück", command=self.zeige_hauptmenue).pack()
+            return
 
-    elif wahl == "3": # HINZUFÜGEN
-        print(f"\n{Style.FETT}Hinzufügen zu {abt_name} ({typ}){Style.ENDE}")
-        sp = input("Spanisch: ").strip()
-        de = input("Deutsch : ").strip()
-        if sp and de:
-            pool[sp] = de
-            speichern(daten)
-            print(f"{Style.GRUEN}Erfolgreich gespeichert!{Style.ENDE}")
-        else:
-            print(f"{Style.ROT}Abgebrochen: Leere Eingabe.{Style.ENDE}")
-        time.sleep(1.5)
+        lbl = ctk.CTkLabel(self.container, text="Wie viele Fragen möchtest du beantworten?", font=("Arial", 18))
+        lbl.pack(pady=30)
 
-    elif wahl == "4": # VERWALTEN
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print(f"{Style.FETT}LISTE: {abt_name} ({typ}){Style.ENDE}")
-        items = list(pool.items())
-        for i, (k, v) in enumerate(items, 1):
-            print(f"{i:2}. {k:18} ➔  {v}")
+        slider = ctk.CTkSlider(self.container, from_=1, to=len(pool), number_of_steps=len(pool), width=400)
+        slider.set(min(10, len(pool)))
+        slider.pack(pady=10)
+
+        slider_val = ctk.CTkLabel(self.container, text=f"Auswahl: {int(slider.get())}")
+        slider_val.pack()
+        slider.configure(command=lambda v: slider_val.configure(text=f"Auswahl: {int(v)}"))
+
+        def start():
+            self.limit = int(slider.get())
+            self.quiz_pool = list(pool.items())
+            random.shuffle(self.quiz_pool)
+            self.quiz_pool = self.quiz_pool[:self.limit]
+            self.quiz_index = 0
+            self.runde_korrekt = 0
+            self.naechste_frage()
+
+        ctk.CTkButton(self.container, text="QUIZ STARTEN", fg_color="green", command=start, height=50, width=200).pack(pady=40)
+
+    def naechste_frage(self):
+        self.clear_screen()
+        if self.quiz_index >= len(self.quiz_pool):
+            self.quiz_finish()
+            return
+
+        # Fortschrittsbalken
+        prozent = (self.quiz_index + 1) / self.limit
+        bar = ctk.CTkProgressBar(self.container, width=500)
+        bar.pack(pady=20)
+        bar.set(prozent)
         
-        nr = input(f"\nNummer zum Löschen (oder Enter): ")
-        if nr.isdigit():
-            idx = int(nr) - 1
-            if 0 <= idx < len(items):
-                key_del = items[idx][0]
-                del pool[key_del]
-                speichern(daten)
-                print("Gelöscht!")
+        # Daten
+        sp, de = self.quiz_pool[self.quiz_index]
+        modus = self.daten["settings"]["modus"]
+        frage, loesung = (sp, de) if modus == "SP_DE" else (de, sp)
+
+        # UI
+        ctk.CTkLabel(self.container, text=f"Frage {self.quiz_index + 1} von {self.limit}", font=("Arial", 14, "italic")).pack()
+        ctk.CTkLabel(self.container, text="Was heißt:", font=("Arial", 18)).pack(pady=(20, 5))
+        ctk.CTkLabel(self.container, text=frage, font=("Arial", 32, "bold"), text_color="#3a7ebf").pack(pady=20)
+
+        entry = ctk.CTkEntry(self.container, width=350, height=45, font=("Arial", 18), placeholder_text="Deine Antwort...")
+        entry.pack(pady=10)
+        entry.focus()
+
+        feedback_lbl = ctk.CTkLabel(self.container, text="")
+        feedback_lbl.pack(pady=10)
+
+        def validieren(event=None):
+            ans = entry.get().strip().lower()
+            if ans == loesung.lower():
+                feedback_lbl.configure(text="✨ RICHTIG! +10 Punkte", text_color="green")
+                self.daten["stats"]["punkte"] += 10
+                self.daten["stats"]["korrekt"] += 1
+                self.runde_korrekt += 1
             else:
-                print("Ungültig!")
-        input("Enter...")
-
-    elif wahl == "5": # EINSTELLUNGEN
-        while True:
-            os.system('cls' if os.name == 'nt' else 'clear')
-            print(f"{Style.GELB}{Style.FETT}⚙️ EINSTELLUNGEN{Style.ENDE}")
-            print(f"1: Abteil wechseln (Aktuell: {abt_name})")
-            print(f"2: Neues Abteil erstellen")
-            print(f"3: Abteil löschen")
-            print(f"4: Typ wechseln (Vokabeln / Sätze)")
-            print(f"5: Richtung wechseln ({sett['modus']})")
-            print(f"6: Zurück")
+                feedback_lbl.configure(text=f"❌ FALSCH! Lösung: {loesung}", text_color="red")
+                self.daten["stats"]["punkte"] = max(0, self.daten["stats"]["punkte"] - 5)
+                self.daten["stats"]["falsch"] += 1
             
-            sub = input("\nWahl: ")
-            if sub == "1":
-                abts = list(daten["abteile"].keys())
-                for i, n in enumerate(abts, 1): print(f"[{i}] {n}")
-                a_wahl = input("Nr wählen: ")
-                if a_wahl.isdigit() and 1 <= int(a_wahl) <= len(abts):
-                    sett["aktiv_abteil"] = abts[int(a_wahl)-1]
-            elif sub == "2":
-                neu_abt = input("Name des neuen Abteils: ").strip()
-                if neu_abt:
-                    daten["abteile"][neu_abt] = {"vokabeln": {}, "saetze": {}}
-                    sett["aktiv_abteil"] = neu_abt
-            elif sub == "3":
-                if len(daten["abteile"]) > 1:
-                    del daten["abteile"][abt_name]
-                    sett["aktiv_abteil"] = list(daten["abteile"].keys())[0]
-                    print("Abteil gelöscht.")
+            self.quiz_index += 1
+            self.after(1200, self.naechste_frage)
+
+        self.bind("<Return>", validieren)
+        ctk.CTkButton(self.container, text="PRÜFEN", command=validieren, width=150).pack(pady=10)
+
+    def quiz_finish(self):
+        self.clear_screen()
+        self.unbind("<Return>")
+        self.speichern()
+        
+        ctk.CTkLabel(self.container, text="🏁 QUIZ BEENDET", font=("Arial", 30, "bold"), text_color="#e6b800").pack(pady=30)
+        ctk.CTkLabel(self.container, text=f"Ergebnis: {self.runde_korrekt} von {self.limit} richtig!", font=("Arial", 20)).pack(pady=10)
+        
+        success_rate = (self.runde_korrekt / self.limit) * 100
+        ctk.CTkLabel(self.container, text=f"Erfolgsquote: {int(success_rate)}%", font=("Arial", 16, "italic")).pack(pady=10)
+
+        ctk.CTkButton(self.container, text="ZURÜCK ZUM MENÜ", command=self.zeige_hauptmenue, width=250, height=45).pack(pady=40)
+
+    # =============================================================================
+    # 5. ÜBUNGS-SEKTION (LERNMODUS)
+    # =============================================================================
+
+    def start_ueben(self):
+        self.clear_screen()
+        pool_dict = self.daten["abteile"][self.daten["settings"]["aktiv_abteil"]][self.daten["settings"]["typ"]]
+        if not pool_dict: return
+
+        def lade_uebung():
+            self.clear_screen()
+            q, l = random.choice(list(pool_dict.items()))
+            modus = self.daten["settings"]["modus"]
+            f_w, l_w = (q, l) if modus == "SP_DE" else (l, q)
+
+            ctk.CTkLabel(self.container, text="📖 ÜBUNGSMODUS", font=("Arial", 22, "bold"), text_color="#e6b800").pack(pady=20)
+            ctk.CTkLabel(self.container, text="Tippe '?' für die Lösung", font=("Arial", 12, "italic")).pack()
+            
+            q_lbl = ctk.CTkLabel(self.container, text=f_w, font=("Arial", 30, "bold"), text_color="#3a7ebf")
+            q_lbl.pack(pady=40)
+
+            ans_ent = ctk.CTkEntry(self.container, width=300, height=40)
+            ans_ent.pack(pady=10)
+            ans_ent.focus()
+
+            def check_ans(event=None):
+                user_val = ans_ent.get().strip().lower()
+                if user_val == "?":
+                    q_lbl.configure(text=f"Lösung: {l_w}", text_color="orange")
+                    ans_ent.delete(0, "end")
+                elif user_val == l_w.lower():
+                    q_lbl.configure(text="✔ RICHTIG!", text_color="green")
+                    self.after(800, lade_uebung)
                 else:
-                    print("Letztes Abteil kann nicht gelöscht werden.")
-            elif sub == "4":
-                sett["typ"] = "saetze" if sett["typ"] == "vokabeln" else "vokabeln"
-            elif sub == "5":
-                sett["modus"] = "DE_SP" if sett["modus"] == "SP_DE" else "SP_DE"
-            elif sub == "6":
-                break
-            speichern(daten)
+                    ans_ent.configure(border_color="red")
+            
+            self.bind("<Return>", check_ans)
+            
+            btn_box = ctk.CTkFrame(self.container, fg_color="transparent")
+            btn_box.pack(pady=30)
+            ctk.CTkButton(btn_box, text="Nächste", command=lade_uebung).grid(row=0, column=0, padx=10)
+            ctk.CTkButton(btn_box, text="Menü", command=self.zeige_hauptmenue, fg_color="#721c24").grid(row=0, column=1, padx=10)
 
-    elif wahl == "6": # SUCHEN
-        q = input("\n🔍 Suche (in allen Abteilen): ").lower()
-        found = False
-        print(Style.LINIE_DUNN)
-        for a_n, a_c in daten["abteile"].items():
-            # Suche in Vokabeln UND Sätzen
-            for t_n in ["vokabeln", "saetze"]:
-                for sp, de in a_c[t_n].items():
-                    if q in sp.lower() or q in de.lower():
-                        print(f"[{a_n}/{t_n}] {Style.GRUEN}{sp}{Style.ENDE} = {de}")
-                        found = True
-        if not found: print(f"{Style.ROT}Kein Treffer für '{q}'{Style.ENDE}")
-        input(f"\n{Style.LINIE_DUNN}\nEnter...")
+        lade_uebung()
 
-    elif wahl == "7": # HILFE
-        zeige_hilfe()
+    # =============================================================================
+    # 6. VERWALTUNG & EINSTELLUNGEN
+    # =============================================================================
 
-    elif wahl == "8": # EXIT
-        speichern(daten)
-        print(f"\n{Style.GRUEN}¡Adiós! Viel Erfolg in Spanien.{Style.ENDE}")
-        break
+    def zeige_hinzufuegen(self):
+        self.clear_screen()
+        abt = self.daten["settings"]["aktiv_abteil"]
+        typ = self.daten["settings"]["typ"]
 
-# --- ENDE DER DATEI (VOCABULARY MASTER ULTIMATE) ---
+        ctk.CTkLabel(self.container, text=f"➕ NEUER EINTRAG IN: {abt.upper()}", font=("Arial", 20, "bold")).pack(pady=20)
+        
+        sp_in = ctk.CTkEntry(self.container, placeholder_text="Spanisch...", width=400, height=40)
+        sp_in.pack(pady=10)
+        de_in = ctk.CTkEntry(self.container, placeholder_text="Deutsch...", width=400, height=40)
+        de_in.pack(pady=10)
+
+        def save():
+            s, d = sp_in.get().strip(), de_in.get().strip()
+            if s and d:
+                self.daten["abteile"][abt][typ][s] = d
+                self.speichern()
+                self.zeige_hauptmenue()
+
+        ctk.CTkButton(self.container, text="SPEICHERN", command=save, fg_color="green").pack(pady=20)
+        ctk.CTkButton(self.container, text="ABBRECHEN", command=self.zeige_hauptmenue, fg_color="gray").pack()
+
+    def zeige_verwaltung(self):
+        self.clear_screen()
+        abt = self.daten["settings"]["aktiv_abteil"]
+        typ = self.daten["settings"]["typ"]
+        pool = self.daten["abteile"][abt][typ]
+
+        ctk.CTkLabel(self.container, text=f"📁 VERWALTUNG: {abt}", font=("Arial", 20, "bold")).pack(pady=10)
+        
+        # Scrollbare Liste
+        scroll = ctk.CTkScrollableFrame(self.container, width=600, height=400)
+        scroll.pack(pady=10)
+
+        for s, d in pool.items():
+            row = ctk.CTkFrame(scroll, fg_color="#2b2b2b")
+            row.pack(fill="x", pady=2, padx=5)
+            ctk.CTkLabel(row, text=f"{s} = {d}", font=("Arial", 13)).pack(side="left", padx=10, pady=5)
+            
+            def delete(k=s):
+                del self.daten["abteile"][abt][typ][k]
+                self.speichern()
+                self.zeige_verwaltung()
+            
+            ctk.CTkButton(row, text="X", width=30, fg_color="#721c24", command=delete).pack(side="right", padx=5)
+
+        ctk.CTkButton(self.container, text="ZURÜCK", command=self.zeige_hauptmenue).pack(pady=20)
+
+    def zeige_einstellungen(self):
+        self.clear_screen()
+        sett = self.daten["settings"]
+
+        ctk.CTkLabel(self.container, text="⚙️ EINSTELLUNGEN & ABTEILE", font=("Arial", 22, "bold")).pack(pady=20)
+
+        # Richtungs-Toggle
+        m_text = f"Modus: {sett['modus']}"
+        def toggle_m():
+            sett["modus"] = "DE_SP" if sett["modus"] == "SP_DE" else "SP_DE"
+            self.zeige_einstellungen()
+        ctk.CTkButton(self.container, text=m_text, command=toggle_m, width=300).pack(pady=10)
+
+        # Typ-Toggle
+        t_text = f"Lern-Typ: {sett['typ'].capitalize()}"
+        def toggle_t():
+            sett["typ"] = "saetze" if sett["typ"] == "vokabeln" else "vokabeln"
+            self.zeige_einstellungen()
+        ctk.CTkButton(self.container, text=t_text, command=toggle_t, width=300).pack(pady=10)
+
+        # Abteil Auswahl
+        ctk.CTkLabel(self.container, text="Abteil auswählen:", font=("Arial", 14, "bold")).pack(pady=(20, 5))
+        for a_name in self.daten["abteile"].keys():
+            color = "#2fa572" if a_name == sett["aktiv_abteil"] else "gray"
+            ctk.CTkButton(self.container, text=a_name, fg_color=color, width=300, 
+                          command=lambda n=a_name: self.set_active_abt(n)).pack(pady=2)
+
+        ctk.CTkButton(self.container, text="NEUES ABTEIL +", command=self.neues_abteil_dialog).pack(pady=20)
+        ctk.CTkButton(self.container, text="HAUPTMENÜ", command=self.zeige_hauptmenue, fg_color="#3a7ebf").pack(pady=10)
+
+    def set_active_abt(self, n):
+        self.daten["settings"]["aktiv_abteil"] = n
+        self.speichern()
+        self.zeige_einstellungen()
+
+    def neues_abteil_dialog(self):
+        dialog = ctk.CTkInputDialog(text="Name des neuen Abteils:", title="Abteil erstellen")
+        name = dialog.get_input()
+        if name:
+            self.daten["abteile"][name] = {"vokabeln": {}, "saetze": {}}
+            self.daten["settings"]["aktiv_abteil"] = name
+            self.speichern()
+            self.zeige_einstellungen()
+
+    # =============================================================================
+    # 7. SUCHE & EXIT
+    # =============================================================================
+
+    def zeige_suche(self):
+        self.clear_screen()
+        ctk.CTkLabel(self.container, text="🔍 GLOBALE SUCHE", font=("Arial", 22, "bold")).pack(pady=10)
+        
+        entry = ctk.CTkEntry(self.container, width=400, placeholder_text="Wort oder Satz suchen...")
+        entry.pack(pady=10)
+        entry.focus()
+
+        res_scroll = ctk.CTkScrollableFrame(self.container, width=600, height=350)
+        res_scroll.pack(pady=10)
+
+        def search(event=None):
+            for w in res_scroll.winfo_children(): w.destroy()
+            q = entry.get().lower()
+            if not q: return
+            
+            for abt_n, abt_c in self.daten["abteile"].items():
+                for t in ["vokabeln", "saetze"]:
+                    for s, d in abt_c[t].items():
+                        if q in s.lower() or q in d.lower():
+                            l = ctk.CTkLabel(res_scroll, text=f"[{abt_n}/{t}]  {s} = {d}", font=("Arial", 13))
+                            l.pack(anchor="w", padx=10, pady=2)
+
+        self.bind("<Return>", search)
+        ctk.CTkButton(self.container, text="SUCHEN", command=search).pack(pady=10)
+        ctk.CTkButton(self.container, text="ZURÜCK", command=self.zeige_hauptmenue).pack(pady=10)
+
+    def safe_exit(self):
+        self.speichern()
+        self.quit()
+
+if __name__ == "__main__":
+    app = VokabelApp()
+    app.mainloop()
