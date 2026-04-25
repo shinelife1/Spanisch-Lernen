@@ -45,4 +45,4 @@ Klettere die Karriereleiter in Spanien nach oben:
 
 ---
 *Dieses Projekt zeigt meine Entwicklung vom Anfänger zum fortgeschrittenen Python-Entwickler, während ich mich auf mein neues Leben in Spanien vorbereite.*
-![Dashboard Screenshot](Showcase.png)
+![Dashboard Screenshot](showcase.png)
