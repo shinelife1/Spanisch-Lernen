@@ -1,0 +1,210 @@
+{
+    "abteile": {
+        "Aktion-Verben": {
+            "vokabeln": {
+                "Amar": "Lieben",
+                "Odiar": "Hassen",
+                "Sentir": "Fuehlen",
+                "Recordar": "Erinnern",
+                "Olvidar": "Vergessen",
+                "Intentar": "Versuchen",
+                "Lograr": "Erreichen",
+                "Cambiar": "Aendern",
+                "Mantener": "Behalten",
+                "Explicar": "Erklaeren",
+                "Entender": "Verstehen",
+                "Mejorar": "Verbessern",
+                "Elegir": "Waehlen",
+                "Usar": "Benutzen",
+                "Crear": "Erschaffen",
+                "Encender": "Einschalten",
+                "Apagar": "Ausschalten",
+                "Subir": "Hochgehen",
+                "Bajar": "Runtergehen",
+                "Seguir": "Folgen",
+                "Parar": "Anhalten",
+                "Esperar": "Warten",
+                "Ayudar": "Helfen",
+                "Llamar": "Anrufen",
+                "Traer": "Bringen",
+                "Llevar": "Mitnehmen",
+                "Buscar": "Suchen",
+                "Abrir": "Oeffnen",
+                "Cerrar": "Schliessen",
+                "Comprar": "Kaufen",
+                "Vender": "Verkaufen",
+                "Hablar": "Sprechen",
+                "Escuchar": "Zuhoeren",
+                "Ver": "Sehen",
+                "Mirar": "Anschauen",
+                "Dar": "Geben",
+                "Tomar": "Nehmen",
+                "Venir": "Kommen",
+                "Ir": "Gehen",
+                "Salir": "Hinausgehen",
+                "Entrar": "Eintreten",
+                "Vivir": "Leben",
+                "Querer": "Wollen",
+                "Necesitar": "Brauchen",
+                "Pensar": "Denken",
+                "Creer": "Glauben",
+                "Saber": "Wissen",
+                "Aprender": "Lernen",
+                "Ensenar": "Unterrichten",
+                "Preguntar": "Fragen",
+                "Responder": "Antworten",
+                "Trabajar": "Arbeiten",
+                "Descansar": "Ausruhen",
+                "Viajar": "Reisen",
+                "Llegar": "Ankommen",
+                "Encontrar": "Finden",
+                "Perder": "Verlieren",
+                "Empezar": "Beginnen",
+                "Terminar": "Beenden"
+            },
+            "saetze": {
+                "Como se dice esto?": "Wie sagt man das?",
+                "Puede repetir?": "Koennen Sie wiederholen?"
+            }
+        },
+        "Haus-Umgebung": {
+            "vokabeln": {
+                "Mesa": "Tisch",
+                "Silla": "Stuhl",
+                "Cocina": "Kueche",
+                "Dormitorio": "Schlafzimmer",
+                "Oficina": "Buero",
+                "Edificio": "Gebaeude",
+                "Parque": "Park",
+                "Puerta": "Tuer",
+                "Ventana": "Fenster",
+                "Llave": "Schluessel",
+                "Casa": "Haus",
+                "Calle": "Strasse",
+                "Bano": "Toilette",
+                "Habitacion": "Zimmer"
+            },
+            "saetze": {
+                "Donde esta el bano?": "Wo ist die Toilette?",
+                "Tengo una reserva": "Ich habe eine Reservierung"
+            }
+        },
+        "Natur-Wetter": {
+            "vokabeln": {
+                "Rio": "Fluss",
+                "Lago": "See",
+                "Bosque": "Wald",
+                "Cielo": "Himmel",
+                "Sol": "Sonne",
+                "Luna": "Mond",
+                "Estrella": "Stern",
+                "Nube": "Wolke",
+                "Lluvia": "Regen",
+                "Viento": "Wind",
+                "Calor": "Hitze",
+                "Frio": "Kaelte",
+                "Clima": "Wetter",
+                "Playa": "Strand",
+                "Montana": "Berg"
+            },
+            "saetze": {
+                "Hace calor": "Es ist warm",
+                "Me gusta la playa": "Ich mag den Strand"
+            }
+        },
+        "Reise-Stadt": {
+            "vokabeln": {
+                "Coche": "Auto",
+                "Tren": "Zug",
+                "Avion": "Flugzeug",
+                "Mapa": "Karte",
+                "Camino": "Weg",
+                "Dinero": "Geld",
+                "Precio": "Preis",
+                "Mercado": "Markt",
+                "Tienda": "Geschaeft",
+                "Ciudad": "Stadt",
+                "Pais": "Land",
+                "Hotel": "Hotel",
+                "Trabajo": "Arbeit",
+                "Escuela": "Schule"
+            },
+            "saetze": {
+                "Donde puedo comprar un ticket?": "Wo kann ich ein Ticket kaufen?",
+                "Estoy perdido": "Ich habe mich verlaufen",
+                "Donde esta la parada?": "Wo ist die Haltestelle?",
+                "A que hora abre la tienda?": "Wann oeffnet der Laden?"
+            }
+        },
+        "Essen-Trinken": {
+            "vokabeln": {
+                "Agua": "Wasser",
+                "Comida": "Essen",
+                "Pan": "Brot",
+                "Leche": "Milch",
+                "Cafe": "Kaffee",
+                "Te": "Tee",
+                "Cerveza": "Bier",
+                "Vino": "Wein",
+                "Restaurante": "Restaurant"
+            },
+            "saetze": {
+                "La cuenta por favor": "Die Rechnung bitte",
+                "Quiero eine cerveza": "Ich moechte ein Bier",
+                "Una mesa para dos": "Ein Tisch fuer zwei",
+                "Todo esta rico": "Alles ist lecker"
+            }
+        },
+        "Smalltalk": {
+            "vokabeln": {
+                "Hola": "Hallo",
+                "Gracias": "Danke",
+                "Por favor": "Bitte",
+                "Adios": "Tschuess",
+                "Buenos dias": "Guten Morgen",
+                "Buenas tardes": "Guten Tag",
+                "Buenas noches": "Gute Nacht",
+                "Perdon": "Entschuldigung",
+                "Lo siento": "Es tut mir leid",
+                "Si": "Ja",
+                "No": "Nein",
+                "Bien": "Gut",
+                "Mal": "Schlecht",
+                "Amigo": "Freund",
+                "Familia": "Familie",
+                "Tiempo": "Zeit",
+                "Dia": "Tag",
+                "Noche": "Nacht",
+                "Hoy": "Heute",
+                "Manana": "Morgen",
+                "Ayer": "Gestern",
+                "Siempre": "Immer",
+                "Nunca": "Nie",
+                "Mucho": "Viel",
+                "Poco": "Wenig",
+                "Grande": "Gross",
+                "Pequeno": "Klein",
+                "Rapido": "Schnell",
+                "Lento": "Langsam",
+                "Bonito": "Schoen"
+            },
+            "saetze": {
+                "Como estas?": "Wie geht es dir?",
+                "Que tal?": "Wie gehts?",
+                "Soy de Alemania": "Ich bin aus Deutschland",
+                "Muchas gracias por todo": "Vielen Dank fuer alles",
+                "Buen viaje": "Gute Reise"
+            }
+        }
+    },
+    "stats": {
+        "punkte": 0,
+        "korrekt": 0,
+        "falsch": 0
+    },
+    "settings": {
+        "modus": "DE_SP",
+        "typ": "vokabeln",
+        "aktiv_abteil": "Smalltalk"
+    }
+}
